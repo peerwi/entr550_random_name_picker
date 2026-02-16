@@ -1,0 +1,581 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Arduino Nano 33 BLE Name Manager</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu,
+          Cantarell, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        padding: 20px;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 30px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        margin-bottom: 10px;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 14px;
+      }
+
+      .content {
+        padding: 30px;
+      }
+
+      .status {
+        padding: 15px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-weight: 500;
+        display: none;
+      }
+
+      .status.info {
+        background: #e3f2fd;
+        color: #1976d2;
+        border-left: 4px solid #1976d2;
+      }
+
+      .status.success {
+        background: #e8f5e9;
+        color: #388e3c;
+        border-left: 4px solid #388e3c;
+      }
+
+      .status.error {
+        background: #ffebee;
+        color: #d32f2f;
+        border-left: 4px solid #d32f2f;
+      }
+
+      .status.warning {
+        background: #fff3e0;
+        color: #f57c00;
+        border-left: 4px solid #f57c00;
+      }
+
+      .connection-section {
+        margin-bottom: 30px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        display: inline-block;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+      }
+
+      .btn-primary:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      }
+
+      .btn-secondary {
+        background: #e0e0e0;
+        color: #333;
+      }
+
+      .btn-secondary:hover:not(:disabled) {
+        background: #d0d0d0;
+      }
+
+      .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .input-group {
+        margin-bottom: 20px;
+      }
+
+      .input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 600;
+        color: #333;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 200px;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 8px;
+        font-family: inherit;
+        font-size: 14px;
+        resize: vertical;
+        transition: border-color 0.3s;
+      }
+
+      textarea:focus {
+        outline: none;
+        border-color: #667eea;
+      }
+
+      .help-text {
+        font-size: 13px;
+        color: #666;
+        margin-top: 5px;
+      }
+
+      .name-list {
+        margin-top: 20px;
+      }
+
+      .name-item {
+        padding: 10px;
+        background: #f5f5f5;
+        border-radius: 6px;
+        margin-bottom: 8px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .name-item:nth-child(even) {
+        background: #fafafa;
+      }
+
+      .console {
+        background: #1e1e1e;
+        color: #d4d4d4;
+        padding: 15px;
+        border-radius: 8px;
+        font-family: "Courier New", monospace;
+        font-size: 13px;
+        max-height: 300px;
+        overflow-y: auto;
+        margin-top: 20px;
+      }
+
+      .console-line {
+        margin-bottom: 4px;
+        word-wrap: break-word;
+      }
+
+      .console-line.sent {
+        color: #4ec9b0;
+      }
+
+      .console-line.received {
+        color: #ce9178;
+      }
+
+      .console-line.error {
+        color: #f48771;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: #e0e0e0;
+        border-radius: 4px;
+        overflow: hidden;
+        margin: 20px 0;
+        display: none;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        width: 0%;
+        transition: width 0.3s;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📝 Arduino Nano 33 BLE Name Manager</h1>
+        <p>
+          Send a list of names to your Arduino Nano 33 BLE's flash storage over
+          USB
+        </p>
+      </div>
+
+      <div class="content">
+        <div class="status" id="status"></div>
+
+        <div class="status info" style="display: block">
+          💡 <strong>Tip:</strong> If connection fails, make sure: <br />•
+          Arduino IDE Serial Monitor is closed <br />• No other tabs/programs
+          are using the port <br />• Click "Disconnect" before refreshing the
+          page
+        </div>
+
+        <div class="connection-section">
+          <button class="btn btn-primary" id="connectBtn">
+            Connect to Arduino
+          </button>
+          <button
+            class="btn btn-secondary"
+            id="disconnectBtn"
+            style="display: none"
+          >
+            Disconnect
+          </button>
+        </div>
+
+        <div class="input-group">
+          <label for="nameInput">Enter Names (one per line):</label>
+          <textarea
+            id="nameInput"
+            placeholder="John Doe&#10;Jane Smith&#10;Alice Johnson&#10;Bob Williams"
+          ></textarea>
+          <div class="help-text">
+            Each name can be up to 32 characters. Maximum 50 names.
+          </div>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-primary" id="sendBtn" disabled>Send</button>
+          <button class="btn btn-secondary" id="readBtn" disabled>Read</button>
+          <button class="btn btn-secondary" id="clearBtn" disabled>
+            Clear
+          </button>
+        </div>
+
+        <div class="name-list" id="nameList"></div>
+
+        <div class="console" id="console"></div>
+      </div>
+    </div>
+
+    <script>
+      let port = null;
+      let reader = null;
+      let writer = null;
+      let isConnected = false;
+      let keepReading = true;
+
+      const connectBtn = document.getElementById("connectBtn");
+      const disconnectBtn = document.getElementById("disconnectBtn");
+      const sendBtn = document.getElementById("sendBtn");
+      const readBtn = document.getElementById("readBtn");
+      const clearBtn = document.getElementById("clearBtn");
+      const nameInput = document.getElementById("nameInput");
+      const statusDiv = document.getElementById("status");
+      const consoleDiv = document.getElementById("console");
+      const nameList = document.getElementById("nameList");
+      const progressBar = document.getElementById("progressBar");
+      const progressFill = document.getElementById("progressFill");
+
+      function showStatus(message, type = "info") {
+        statusDiv.textContent = message;
+        statusDiv.className = `status ${type}`;
+        statusDiv.style.display = "block";
+        addConsoleLog(message, type);
+      }
+
+      function addConsoleLog(message, type = "info") {
+        const line = document.createElement("div");
+        line.className = `console-line ${type}`;
+        const timestamp = new Date().toLocaleTimeString();
+        line.textContent = `[${timestamp}] ${message}`;
+        consoleDiv.appendChild(line);
+        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+      }
+
+      async function connectToArduino() {
+        try {
+          // If we already have a port, try to reuse it
+          if (port) {
+            try {
+              await disconnectFromArduino();
+              await sleep(500); // Wait for cleanup
+            } catch (e) {
+              console.log("Cleanup error (ignored):", e);
+            }
+          }
+
+          // Request a port and open a connection
+          port = await navigator.serial.requestPort();
+
+          // Try to open with proper error handling
+          try {
+            await port.open({ baudRate: 9600 });
+          } catch (openError) {
+            if (openError.message.includes("already open")) {
+              showStatus(
+                "Port is already open. Please disconnect other applications using the port.",
+                "error",
+              );
+              return;
+            }
+            throw openError;
+          }
+
+          keepReading = true;
+
+          const textDecoder = new TextDecoderStream();
+          const readableStreamClosed = port.readable.pipeTo(
+            textDecoder.writable,
+          );
+          reader = textDecoder.readable.getReader();
+
+          const textEncoder = new TextEncoderStream();
+          const writableStreamClosed = textEncoder.readable.pipeTo(
+            port.writable,
+          );
+          writer = textEncoder.writable.getWriter();
+
+          isConnected = true;
+          connectBtn.style.display = "none";
+          disconnectBtn.style.display = "inline-block";
+          sendBtn.disabled = false;
+          readBtn.disabled = false;
+          clearBtn.disabled = false;
+
+          showStatus("Connected to Arduino successfully!", "success");
+
+          // Start reading responses
+          readLoop();
+        } catch (error) {
+          if (error.message.includes("No port selected")) {
+            showStatus("No port selected", "info");
+          } else {
+            showStatus(`Connection failed: ${error.message}`, "error");
+          }
+
+          // Clean up on error
+          if (port) {
+            try {
+              await port.close();
+            } catch (e) {}
+            port = null;
+          }
+        }
+      }
+
+      async function readLoop() {
+        try {
+          while (keepReading) {
+            const { value, done } = await reader.read();
+            if (done) {
+              break;
+            }
+            if (value) {
+              addConsoleLog(`← ${value.trim()}`, "received");
+            }
+          }
+        } catch (error) {
+          if (error.name !== "NetworkError" && keepReading) {
+            addConsoleLog(`Read error: ${error.message}`, "error");
+          }
+        } finally {
+          if (reader) {
+            try {
+              reader.releaseLock();
+            } catch (e) {}
+          }
+        }
+      }
+
+      async function disconnectFromArduino() {
+        keepReading = false;
+
+        // Close writer first
+        if (writer) {
+          try {
+            await writer.close();
+          } catch (e) {
+            console.log("Writer close error (ignored):", e);
+          }
+          writer = null;
+        }
+
+        // Cancel reader
+        if (reader) {
+          try {
+            await reader.cancel();
+          } catch (e) {
+            console.log("Reader cancel error (ignored):", e);
+          }
+          reader = null;
+        }
+
+        // Close port
+        if (port) {
+          try {
+            await port.close();
+          } catch (e) {
+            console.log("Port close error (ignored):", e);
+          }
+          port = null;
+        }
+
+        isConnected = false;
+        connectBtn.style.display = "inline-block";
+        disconnectBtn.style.display = "none";
+        sendBtn.disabled = true;
+        readBtn.disabled = true;
+        clearBtn.disabled = true;
+
+        showStatus("Disconnected from Arduino", "info");
+      }
+
+      async function sendCommand(command) {
+        if (!isConnected || !writer) {
+          showStatus("Not connected to Arduino", "error");
+          return;
+        }
+        await writer.write(command + "\n");
+        addConsoleLog(`→ ${command}`, "sent");
+      }
+
+      async function sendNames() {
+        const names = nameInput.value
+          .split("\n")
+          .filter((name) => name.trim() !== "");
+
+        if (names.length === 0) {
+          showStatus("Please enter at least one name", "warning");
+          return;
+        }
+
+        if (names.length > 50) {
+          showStatus("Maximum 50 names allowed", "warning");
+          return;
+        }
+
+        showStatus(`Sending ${names.length} names ...`, "info");
+        progressBar.style.display = "block";
+
+        try {
+          // Send clear command first
+          await sendCommand("CLEAR");
+          await sleep(100);
+
+          // Send count
+          await sendCommand(`COUNT:${names.length}`);
+          await sleep(100);
+
+          // Send each name
+          for (let i = 0; i < names.length; i++) {
+            const name = names[i].trim().substring(0, 32); // Limit to 32 chars
+            await sendCommand(`NAME:${i}:${name}`);
+            progressFill.style.width = `${((i + 1) / names.length) * 100}%`;
+            await sleep(50);
+          }
+
+          // Send save command
+          await sendCommand("SAVE");
+
+          showStatus(`Successfully sent ${names.length} names!`, "success");
+
+          setTimeout(() => {
+            progressBar.style.display = "none";
+            progressFill.style.width = "0%";
+          }, 2000);
+        } catch (error) {
+          showStatus(`Error sending names: ${error.message}`, "error");
+          progressBar.style.display = "none";
+          progressFill.style.width = "0%";
+        }
+      }
+
+      async function readNames() {
+        showStatus("Reading names...", "info");
+        nameList.innerHTML = "";
+        await sendCommand("READ");
+      }
+
+      async function clearNames() {
+        if (confirm("Are you sure you want to clear all names?")) {
+          showStatus("Clearing names...", "info");
+          await sendCommand("CLEAR");
+          await sendCommand("SAVE");
+          nameList.innerHTML = "";
+          showStatus("Names cleared successfully!", "success");
+        }
+      }
+
+      function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      // Event listeners
+      connectBtn.addEventListener("click", connectToArduino);
+      disconnectBtn.addEventListener("click", disconnectFromArduino);
+      sendBtn.addEventListener("click", sendNames);
+      readBtn.addEventListener("click", readNames);
+      clearBtn.addEventListener("click", clearNames);
+
+      // Check if Web Serial API is supported
+      if ("serial" in navigator) {
+        addConsoleLog("Web Serial API supported ✓", "success");
+
+        // Try to close any previously opened ports
+        navigator.serial.getPorts().then((ports) => {
+          if (ports.length > 0) {
+            addConsoleLog(
+              `Found ${ports.length} previously used port(s)`,
+              "info",
+            );
+            // Note: We can't automatically close them, but we can inform the user
+          }
+        });
+      } else {
+        showStatus(
+          "Web Serial API not supported in this browser. Please use Chrome, Edge, or Opera.",
+          "error",
+        );
+        connectBtn.disabled = true;
+      }
+
+      // Handle page unload - try to close port
+      window.addEventListener("beforeunload", async (e) => {
+        if (isConnected) {
+          await disconnectFromArduino();
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -394,15 +394,26 @@
         }
       }
 
+      let readBuffer = "";
+
       async function readLoop() {
         try {
           while (keepReading) {
             const { value, done } = await reader.read();
-            if (done) {
-              break;
-            }
+            if (done) break;
+
             if (value) {
-              addConsoleLog(`← ${value.trim()}`, "received");
+              readBuffer += value;
+
+              let lines = readBuffer.split("\n");
+              readBuffer = lines.pop(); // keep incomplete line
+
+              for (const line of lines) {
+                const cleaned = line.trim();
+                if (cleaned.length > 0) {
+                  addConsoleLog(`← ${cleaned}`, "received");
+                }
+              }
             }
           }
         } catch (error) {
